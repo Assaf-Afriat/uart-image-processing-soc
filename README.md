@@ -1,5 +1,8 @@
 # UART Image Processing SoC
 
+**Interactive Project Demo:**
+https://assaf-afriat.github.io/uart-image-processing-soc/docs/project_demo.html
+
 A multi-clock UART-based System-on-Chip designed in SystemVerilog for real-time 256x256 RGB image transfer between a host PC and an FPGA. Implements a full protocol stack (PHY, MAC, Classifier, CDC) with DMA-style burst engine and register file infrastructure.
 
 **Target**: Digilent Nexys A7-100T (Artix-7 XC7A100T)  
