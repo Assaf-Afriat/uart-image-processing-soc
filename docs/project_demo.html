@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UART Image Processing SoC - Project Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-code: #0d1117;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6a6a7a;
+            --accent: #6366f1;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --accent-orange: #f97316;
+            --border: #2a2a38;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed; left:0; top:0; width:300px; height:100vh;
+            background: var(--bg-secondary); border-right:1px solid var(--border);
+            overflow-y:auto; z-index:100; padding:30px 20px;
+        }
+        .sidebar-header { margin-bottom:35px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+        .sidebar-logo {
+            font-size:24px; font-weight:800;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-yellow));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:6px;
+        }
+        .sidebar-subtitle { color:var(--text-muted); font-size:12px; font-weight:500; }
+        .sidebar-badge {
+            display:inline-block; background:linear-gradient(135deg,var(--accent-green),var(--accent-cyan));
+            color:white; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; margin-top:8px;
+        }
+        .nav-section { margin-bottom:22px; }
+        .nav-section-title {
+            font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px;
+            color:var(--text-muted); margin-bottom:10px; padding-left:10px;
+        }
+        .nav-link {
+            display:block; padding:9px 14px; color:var(--text-secondary); text-decoration:none;
+            border-radius:8px; font-size:13px; font-weight:500; transition:all .2s; margin-bottom:3px;
+        }
+        .nav-link:hover { background:var(--bg-card); color:var(--text-primary); }
+        .nav-link.active {
+            background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(59,130,246,.1));
+            color:var(--accent); border-left:3px solid var(--accent);
+        }
+        .nav-icon { margin-right:8px; opacity:.7; }
+
+        /* Main */
+        .main-content { margin-left:300px; padding:50px 70px; max-width:1350px; }
+
+        /* Hero */
+        .hero {
+            background:linear-gradient(135deg,var(--bg-card) 0%,var(--bg-secondary) 100%);
+            border-radius:20px; padding:55px; margin-bottom:60px; border:1px solid var(--border);
+            position:relative; overflow:hidden;
+        }
+        .hero::before {
+            content:''; position:absolute; top:0; right:0; width:400px; height:400px;
+            background:radial-gradient(circle,rgba(249,115,22,.15) 0%,transparent 70%); pointer-events:none;
+        }
+        .hero::after {
+            content:''; position:absolute; bottom:-50px; left:-50px; width:300px; height:300px;
+            background:radial-gradient(circle,rgba(6,182,212,.1) 0%,transparent 70%); pointer-events:none;
+        }
+        .hero h1 {
+            font-size:44px; font-weight:800; margin-bottom:18px;
+            background:linear-gradient(135deg,var(--text-primary),var(--accent-orange));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        }
+        .hero-subtitle { font-size:18px; color:var(--text-secondary); margin-bottom:28px; max-width:750px; }
+        .hero-badge {
+            display:inline-flex; align-items:center; gap:10px;
+            background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(6,182,212,.1));
+            border:1px solid var(--accent-green); padding:8px 18px; border-radius:25px; margin-bottom:20px;
+        }
+        .pulse { width:10px; height:10px; background:var(--accent-green); border-radius:50%; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(1.2);} }
+        .hero-stats { display:flex; gap:45px; margin-top:35px; flex-wrap:wrap; }
+        .stat-item { text-align:center; }
+        .stat-value { font-size:34px; font-weight:800; }
+        .stat-value.orange { color:var(--accent-orange); }
+        .stat-value.green { color:var(--accent-green); }
+        .stat-value.blue { color:var(--accent-blue); }
+        .stat-value.cyan { color:var(--accent-cyan); }
+        .stat-value.yellow { color:var(--accent-yellow); }
+        .stat-value.purple { color:var(--accent-purple); }
+        .stat-label { font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+
+        /* Sections */
+        .section { margin-bottom:70px; }
+        .section-header { margin-bottom:35px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+        .section h2 { font-size:30px; font-weight:700; margin-bottom:12px; }
+        .section h3 { font-size:22px; font-weight:600; margin:35px 0 18px; color:var(--text-primary); }
+        .section h4 { font-size:17px; font-weight:600; margin:28px 0 14px; color:var(--accent-blue); }
+        .section-desc { font-size:15px; color:var(--text-secondary); max-width:800px; }
+        p { margin-bottom:18px; color:var(--text-secondary); }
+
+        /* Cards */
+        .card { background:var(--bg-card); border-radius:14px; padding:28px; margin-bottom:22px; border:1px solid var(--border); }
+        .card-header { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+        .card-icon {
+            width:48px; height:48px; border-radius:12px; display:flex;
+            align-items:center; justify-content:center; font-size:22px; flex-shrink:0;
+        }
+        .card-icon.blue { background:rgba(59,130,246,.2); }
+        .card-icon.green { background:rgba(16,185,129,.2); }
+        .card-icon.purple { background:rgba(139,92,246,.2); }
+        .card-icon.yellow { background:rgba(245,158,11,.2); }
+        .card-icon.red { background:rgba(239,68,68,.2); }
+        .card-icon.cyan { background:rgba(6,182,212,.2); }
+        .card-icon.orange { background:rgba(249,115,22,.2); }
+        .card-title { font-size:18px; font-weight:600; color:var(--text-primary); }
+        .card-subtitle { font-size:13px; color:var(--text-muted); }
+
+        /* Code */
+        .code-block {
+            background:var(--bg-code); border-radius:12px; padding:22px; margin:18px 0;
+            font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.8;
+            overflow-x:auto; border:1px solid var(--border); white-space:pre;
+        }
+        .code-block code { color:var(--text-primary); }
+        .code-comment { color:#6a9955; }
+        .code-keyword { color:#569cd6; }
+        .code-type { color:#4ec9b0; }
+        .code-string { color:#ce9178; }
+        .code-number { color:#b5cea8; }
+        .code-signal { color:#9cdcfe; }
+        .code-module { color:#dcdcaa; }
+
+        /* Tables */
+        .table-container { overflow-x:auto; margin:18px 0; border-radius:12px; border:1px solid var(--border); }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th { background:var(--bg-card); padding:14px 18px; text-align:left; font-weight:600; color:var(--text-primary); border-bottom:1px solid var(--border); }
+        td { padding:13px 18px; border-bottom:1px solid var(--border); color:var(--text-secondary); }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:rgba(99,102,241,.04); }
+
+        /* Grids */
+        .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:22px; }
+        .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+        .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+        @media(max-width:1100px) { .grid-3{grid-template-columns:repeat(2,1fr);} .grid-4{grid-template-columns:repeat(2,1fr);} }
+        @media(max-width:800px) { .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .sidebar{display:none;} .main-content{margin-left:0;padding:25px;} }
+
+        /* Tags & Badges */
+        .tag {
+            display:inline-block; padding:4px 10px; border-radius:6px; font-size:11px;
+            font-weight:600; font-family:'JetBrains Mono',monospace;
+        }
+        .tag.fast { background:rgba(249,115,22,.15); color:var(--accent-orange); }
+        .tag.sys  { background:rgba(59,130,246,.15); color:var(--accent-blue); }
+        .tag.both { background:rgba(139,92,246,.15); color:var(--accent-purple); }
+        .tag.ok   { background:rgba(16,185,129,.15); color:var(--accent-green); }
+
+        /* Diagram */
+        .diagram {
+            background:var(--bg-code); border-radius:14px; padding:30px; margin:20px 0;
+            font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.6;
+            overflow-x:auto; border:1px solid var(--border); white-space:pre; color:var(--text-secondary);
+        }
+        .diagram .hl-orange { color:var(--accent-orange); font-weight:600; }
+        .diagram .hl-blue { color:var(--accent-blue); font-weight:600; }
+        .diagram .hl-green { color:var(--accent-green); font-weight:600; }
+        .diagram .hl-cyan { color:var(--accent-cyan); font-weight:600; }
+        .diagram .hl-yellow { color:var(--accent-yellow); font-weight:600; }
+        .diagram .hl-purple { color:var(--accent-purple); font-weight:600; }
+
+        /* Metric bar */
+        .metric-bar { height:6px; background:var(--bg-code); border-radius:3px; margin-top:8px; overflow:hidden; }
+        .metric-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+        .metric-fill.green { background:linear-gradient(90deg,var(--accent-green),var(--accent-cyan)); }
+        .metric-fill.orange { background:linear-gradient(90deg,var(--accent-orange),var(--accent-yellow)); }
+        .metric-fill.blue { background:linear-gradient(90deg,var(--accent-blue),var(--accent-purple)); }
+
+        /* Timeline */
+        .timeline-item { display:flex; gap:18px; margin-bottom:25px; }
+        .timeline-dot { width:12px; height:12px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+        .timeline-content { flex:1; }
+        .timeline-title { font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+        .timeline-desc { font-size:14px; color:var(--text-secondary); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
+
+        /* Lists */
+        ul { padding-left:22px; margin-bottom:16px; }
+        li { margin-bottom:8px; color:var(--text-secondary); }
+        li strong { color:var(--text-primary); }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<nav class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">UART SoC</div>
+        <div class="sidebar-subtitle">Image Processing System - RTL Design</div>
+        <div class="sidebar-badge">Synthesized &amp; Tested on FPGA</div>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-section-title">Overview</div>
+        <a href="#hero" class="nav-link active"><span class="nav-icon">&#9670;</span>Project Summary</a>
+        <a href="#architecture" class="nav-link"><span class="nav-icon">&#9672;</span>Architecture</a>
+        <a href="#data-flow" class="nav-link"><span class="nav-icon">&#8644;</span>Data Flow</a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Protocol Stack</div>
+        <a href="#phy" class="nav-link"><span class="nav-icon">&#9632;</span>PHY Layer</a>
+        <a href="#mac" class="nav-link"><span class="nav-icon">&#9633;</span>MAC Layer</a>
+        <a href="#classifier" class="nav-link"><span class="nav-icon">&#9830;</span>Classifier / Parser</a>
+        <a href="#protocol" class="nav-link"><span class="nav-icon">&#9993;</span>Message Protocol</a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">System Design</div>
+        <a href="#cdc" class="nav-link"><span class="nav-icon">&#8651;</span>Clock Domain Crossing</a>
+        <a href="#sequencers" class="nav-link"><span class="nav-icon">&#9655;</span>Sequencers &amp; DMA</a>
+        <a href="#memory" class="nav-link"><span class="nav-icon">&#9646;</span>Memory Subsystem</a>
+        <a href="#rgf" class="nav-link"><span class="nav-icon">&#9776;</span>Register Files</a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Verification &amp; Debug</div>
+        <a href="#testbenches" class="nav-link"><span class="nav-icon">&#10003;</span>Testbenches</a>
+        <a href="#python" class="nav-link"><span class="nav-icon">&#9881;</span>Python Host Scripts</a>
+        <a href="#challenges" class="nav-link"><span class="nav-icon">&#9888;</span>Design Challenges</a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-title">Reference</div>
+        <a href="#modules" class="nav-link"><span class="nav-icon">&#9634;</span>Module Index</a>
+        <a href="#skills" class="nav-link"><span class="nav-icon">&#9733;</span>Skills Demonstrated</a>
+    </div>
+</nav>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main class="main-content">
+
+<!-- ─── HERO ─── -->
+<section class="hero" id="hero">
+    <div class="hero-badge"><div class="pulse"></div><span style="color:var(--accent-green);font-weight:600;font-size:14px;">Hardware Verified on Nexys A7-100T</span></div>
+    <h1>UART Image Processing SoC</h1>
+    <p class="hero-subtitle">
+        A multi-clock SystemVerilog SoC that transfers 256&times;256 RGB images between a PC and FPGA at 5.5 Mbaud.
+        Full custom protocol stack with PHY, MAC, classifier, CDC synchronizers, DMA burst engine, and register file infrastructure.
+    </p>
+    <div class="hero-stats">
+        <div class="stat-item"><div class="stat-value orange">27</div><div class="stat-label">RTL Modules</div></div>
+        <div class="stat-item"><div class="stat-value cyan">5.5M</div><div class="stat-label">Baud Rate</div></div>
+        <div class="stat-item"><div class="stat-value green">2</div><div class="stat-label">Clock Domains</div></div>
+        <div class="stat-item"><div class="stat-value blue">65,536</div><div class="stat-label">Pixels / Frame</div></div>
+        <div class="stat-item"><div class="stat-value yellow">6</div><div class="stat-label">Register Files</div></div>
+        <div class="stat-item"><div class="stat-value purple">6</div><div class="stat-label">Testbenches</div></div>
+    </div>
+</section>
+
+<!-- ─── ARCHITECTURE ─── -->
+<section class="section" id="architecture">
+    <div class="section-header">
+        <h2>System Architecture</h2>
+        <p class="section-desc">The SoC spans two clock domains (176 MHz for serial I/O, 100 MHz for system logic) with full CDC synchronization between them.</p>
+    </div>
+
+    <div class="diagram"><span class="hl-yellow">Host PC</span>                                        <span class="hl-orange">FPGA &mdash; Nexys A7-100T</span>
+&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;                          &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
+                                  <span class="hl-orange">176 MHz Domain</span>                     <span class="hl-blue">100 MHz Domain</span>
+
+  <span class="hl-yellow">Python</span>  &mdash;&mdash; UART RX &mdash;&mdash;&gt;  <span class="hl-orange">RX PHY</span> &rarr; <span class="hl-orange">RX MAC</span> &rarr; <span class="hl-orange">Classifier</span> &rarr; <span class="hl-purple">CDC</span> &rarr; <span class="hl-blue">Sequencers</span> &rarr; <span class="hl-cyan">SRAM (R/G/B)</span>
+  <span class="hl-yellow">Scripts</span> &lt;&mdash; UART TX &mdash;&mdash;  <span class="hl-orange">TX PHY</span> &larr; <span class="hl-orange">TX MAC</span> &larr; <span class="hl-orange">Composer</span>  &larr; <span class="hl-purple">CDC</span> &larr; <span class="hl-blue">Sequencers</span> &larr; <span class="hl-cyan">SRAM (R/G/B)</span>
+                                                                    <span class="hl-purple">|</span>
+                                                                    <span class="hl-purple">&#9492;</span>&mdash;&rarr; <span class="hl-blue">RGF Manager</span> &rarr; <span class="hl-green">Register Files (x6)</span>
+                                                                    <span class="hl-purple">&#9492;</span>&mdash;&rarr; <span class="hl-blue">rx_msg_handler</span> (unified handshake)</div>
+
+    <div class="grid-4" style="margin-top:30px;">
+        <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">&#128225;</div>
+            <div style="font-weight:700;color:var(--accent-orange);">RX Path</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">PHY &rarr; MAC &rarr; Classifier &rarr; CDC</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">&#128228;</div>
+            <div style="font-weight:700;color:var(--accent-cyan);">TX Path</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Composer &rarr; MAC &rarr; PHY</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">&#128190;</div>
+            <div style="font-weight:700;color:var(--accent-blue);">DMA Engine</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Burst RX/TX Sequencers</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">&#9211;</div>
+            <div style="font-weight:700;color:var(--accent-purple);">CDC</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">176 MHz &harr; 100 MHz</div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── DATA FLOW ─── -->
+<section class="section" id="data-flow">
+    <div class="section-header">
+        <h2>Data Flow Paths</h2>
+        <p class="section-desc">Three main data flow scenarios, each exercising different parts of the protocol stack.</p>
+    </div>
+
+    <div class="grid-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon orange">&#8595;</div>
+                <div><div class="card-title">Image Write (PC &rarr; FPGA)</div><div class="card-subtitle">Burst DMA to SRAM</div></div>
+            </div>
+            <ol style="padding-left:20px;">
+                <li>Python sends <strong>START_BURST_WR</strong> with height/width</li>
+                <li>Classifier sets <strong>burst_on</strong> signal</li>
+                <li>16,384 pixel messages stream in</li>
+                <li>Burst sequencer writes 3 SRAMs (R/G/B)</li>
+                <li>On completion, <strong>burst_done</strong> clears burst mode</li>
+            </ol>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon cyan">&#8593;</div>
+                <div><div class="card-title">Image Read (FPGA &rarr; PC)</div><div class="card-subtitle">Burst DMA from SRAM</div></div>
+            </div>
+            <ol style="padding-left:20px;">
+                <li>Python sends <strong>START_BURST_RD</strong> request</li>
+                <li>TX sequencer reads all 16K SRAM rows</li>
+                <li>Data pushed through 3 async FIFOs</li>
+                <li>Composer packs interleaved pixel messages</li>
+                <li>TX MAC &amp; PHY serialize to host</li>
+            </ol>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon green">&#8646;</div>
+                <div><div class="card-title">Register Access</div><div class="card-subtitle">RGF Read / Write</div></div>
+            </div>
+            <ol style="padding-left:20px;">
+                <li>Python sends 16-byte <strong>RGF_WRITE</strong></li>
+                <li>Classifier extracts addr, offset, data</li>
+                <li>RGF Manager writes target register</li>
+                <li>For reads: 6-byte <strong>RGF_READ</strong> request</li>
+                <li>Response composed &amp; transmitted back</li>
+            </ol>
+        </div>
+    </div>
+</section>
+
+<!-- ─── PHY ─── -->
+<section class="section" id="phy">
+    <div class="section-header">
+        <h2>PHY Layer &mdash; <code>uart_rx_PHY.sv</code></h2>
+        <p class="section-desc">Bit-level serial reception with 32x oversampling and triple-flop input synchronizer.</p>
+    </div>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><div class="card-icon orange">&#9632;</div><div><div class="card-title">Oversampling</div><div class="card-subtitle">32 samples per bit period</div></div></div>
+            <p>The PHY samples the RX line 32 times per bit. The decision sample is taken at tick 16 (middle of the bit window), maximizing noise margin and tolerance to clock drift.</p>
+            <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+                    <span>Tick 0</span><span style="color:var(--accent-green);font-weight:600;">&#9660; Sample @ Tick 16</span><span>Tick 31</span>
+                </div>
+                <div class="metric-bar" style="height:8px;"><div class="metric-fill orange" style="width:50%;"></div></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon blue">&#8644;</div><div><div class="card-title">FSM States</div><div class="card-subtitle">4-state receive machine</div></div></div>
+            <div class="diagram" style="font-size:11px;padding:16px;margin:0;">  IDLE ------> START_BIT ------> DATA_BITS ------> STOP_BIT
+   |                                                   |
+   +---------------------------------------------------+</div>
+            <ul style="margin-top:14px;">
+                <li><strong>Triple-flop synchronizer</strong> prevents metastability</li>
+                <li><strong>Frame error</strong> detection on invalid stop bit</li>
+                <li>Outputs: <code>rx_data[7:0]</code>, <code>rx_valid</code>, <code>frame_error</code></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ─── MAC ─── -->
+<section class="section" id="mac">
+    <div class="section-header">
+        <h2>MAC Layer &mdash; <code>uart_rx_MAC.sv</code></h2>
+        <p class="section-desc">Byte-level message assembly with frame validation and delimiter-safe pixel handling.</p>
+    </div>
+    <div class="card">
+        <div class="card-header"><div class="card-icon yellow">&#9633;</div><div><div class="card-title">Frame-Safe Delimiter Handling</div><div class="card-subtitle">Critical design: pixel data 0x7D matches '}' delimiter</div></div></div>
+        <p>When an image pixel has value 125 (0x7D), it's identical to the <code>}</code> frame-closing character. A naive implementation would prematurely terminate the message, scrambling the image.</p>
+        <h4>Solution: Position-Aware <code>close_at_end</code></h4>
+        <div class="code-block"><code><span class="code-comment">// Only accept '}' as a real delimiter at expected message-end positions</span>
+<span class="code-keyword">logic</span> <span class="code-signal">close_at_end</span>;
+<span class="code-keyword">assign</span> <span class="code-signal">close_at_end</span> = is_close &amp;&amp; (<span class="code-signal">byte_idx</span> == <span class="code-number">4'd5</span>  ||   <span class="code-comment">// 6-byte message end</span>
+                                      <span class="code-signal">byte_idx</span> == <span class="code-number">4'd10</span> ||   <span class="code-comment">// 11-byte message end</span>
+                                      <span class="code-signal">byte_idx</span> == <span class="code-number">4'd15</span>);   <span class="code-comment">// 16-byte message end</span>
+
+<span class="code-comment">// In S_COLLECT: 0x7D at non-end positions is treated as pixel data</span>
+<span class="code-keyword">if</span> (<span class="code-signal">close_at_end</span>) next_state = S_DONE;
+<span class="code-comment">// else: continue collecting bytes (safe to have 0x7D as data)</span></code></div>
+        <p>This ensures that even a fully white image (all 0xFF) or any pixel value is transferred without corruption.</p>
+    </div>
+    <div class="card">
+        <div class="card-header"><div class="card-icon blue">&#9776;</div><div><div class="card-title">MAC FSM</div><div class="card-subtitle">3-state message builder</div></div></div>
+        <div class="grid-2" style="margin-top:10px;">
+            <div>
+                <h4>State Machine</h4>
+                <div class="diagram" style="font-size:11px;padding:14px;margin:0;">  S_IDLE ---'{' detected---> S_COLLECT ---close_at_end---> S_DONE
+    |                           |                             |
+    |       invalid byte <------+                             |
+    +---------------------------------------------------------+</div>
+            </div>
+            <div>
+                <h4>Validation Rules</h4>
+                <ul>
+                    <li>Byte 0: must be <code>{</code> (0x7B)</li>
+                    <li>Byte 5/10: must be <code>,</code> (0x2C)</li>
+                    <li>Byte 5/10/15: <code>}</code> terminates message</li>
+                    <li>Invalid format &rarr; drop &amp; return to IDLE</li>
+                    <li>Burst mode skips opcode checks for pixel data</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── CLASSIFIER ─── -->
+<section class="section" id="classifier">
+    <div class="section-header">
+        <h2>Classifier / Parser &mdash; <code>uart_classifier.sv</code></h2>
+        <p class="section-desc">Combinational message format validation with registered field extraction.</p>
+    </div>
+    <div class="card">
+        <div class="card-header"><div class="card-icon purple">&#9830;</div><div><div class="card-title">6 Message Types Decoded</div><div class="card-subtitle">Parsed from opcode byte and field letters</div></div></div>
+        <div class="table-container">
+            <table>
+                <tr><th>Enum</th><th>Opcode</th><th>Field</th><th>Extracted Fields</th></tr>
+                <tr><td><code>MSG_RGF_WRITE</code></td><td>W</td><td>V</td><td>address, offset, data[31:0]</td></tr>
+                <tr><td><code>MSG_RGF_READ</code></td><td>R</td><td>&mdash;</td><td>address, offset</td></tr>
+                <tr><td><code>MSG_START_BURST_WR</code></td><td>I</td><td>H, W</td><td>height[23:0], width[23:0]</td></tr>
+                <tr><td><code>MSG_START_BURST_RD</code></td><td>R</td><td>H, W</td><td>height[23:0], width[23:0]</td></tr>
+                <tr><td><code>MSG_BURST_PIXEL_WR</code></td><td>&mdash;</td><td>&mdash;</td><td>red[31:0], green[31:0], blue[31:0]</td></tr>
+                <tr><td><code>MSG_SINGLE_PIXEL_WR</code></td><td>I</td><td>P</td><td>address, R, G, B</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <h4>Burst Mode Control</h4>
+        <p>When <code>MSG_START_BURST_WR</code> is detected, the classifier asserts <code>burst_on</code> and holds it until the system-domain sequencer signals <code>burst_done</code> (after all pixels are written to SRAM). This keeps the MAC in burst mode so it doesn't reject pixel messages that lack a standard opcode.</p>
+        <div class="code-block"><code><span class="code-keyword">always_ff</span> @(<span class="code-keyword">posedge</span> <span class="code-signal">clk</span>) <span class="code-keyword">begin</span>
+    <span class="code-keyword">if</span> (msg_type == MSG_START_BURST_WR &amp;&amp; mac_msg_valid)
+        <span class="code-signal">burst_on_reg</span> &lt;= <span class="code-number">1'b1</span>;
+    <span class="code-keyword">else if</span> (<span class="code-signal">burst_done</span>)           <span class="code-comment">// from system domain via CDC</span>
+        <span class="code-signal">burst_on_reg</span> &lt;= <span class="code-number">1'b0</span>;
+<span class="code-keyword">end</span></code></div>
+    </div>
+</section>
+
+<!-- ─── PROTOCOL ─── -->
+<section class="section" id="protocol">
+    <div class="section-header">
+        <h2>Message Protocol</h2>
+        <p class="section-desc">All messages use ASCII-framed delimiters: <code>{</code>, <code>,</code>, <code>}</code>. Raw byte values for address and data fields.</p>
+    </div>
+    <div class="table-container">
+        <table>
+            <tr><th>Message Type</th><th>Bytes</th><th>Wire Format</th><th>Direction</th></tr>
+            <tr><td><strong>RGF Write</strong></td><td>16</td><td><code>{W&lt;addr&gt;&lt;off_h&gt;&lt;off_l&gt;,V&lt;dh1&gt;&lt;dh0&gt;&lt;pad&gt;,V&lt;dl1&gt;&lt;dl0&gt;&lt;pad&gt;}</code></td><td>PC &rarr; FPGA</td></tr>
+            <tr><td><strong>RGF Read Request</strong></td><td>6</td><td><code>{R&lt;addr&gt;&lt;off_h&gt;&lt;off_l&gt;}</code></td><td>PC &rarr; FPGA</td></tr>
+            <tr><td><strong>RGF Read Response</strong></td><td>16</td><td><code>{R&lt;addr&gt;&lt;off_h&gt;&lt;off_l&gt;,V&lt;pad&gt;&lt;d31:24&gt;&lt;d23:16&gt;,V&lt;pad&gt;&lt;d15:8&gt;&lt;d7:0&gt;}</code></td><td>FPGA &rarr; PC</td></tr>
+            <tr><td><strong>Start Burst Write</strong></td><td>16</td><td><code>{I&lt;addr&gt;&lt;off_h&gt;&lt;off_l&gt;,H&lt;h2&gt;&lt;h1&gt;&lt;h0&gt;,W&lt;w2&gt;&lt;w1&gt;&lt;w0&gt;}</code></td><td>PC &rarr; FPGA</td></tr>
+            <tr><td><strong>Start Burst Read</strong></td><td>16</td><td><code>{R&lt;addr&gt;&lt;off_h&gt;&lt;off_l&gt;,H&lt;h2&gt;&lt;h1&gt;&lt;h0&gt;,W&lt;w2&gt;&lt;w1&gt;&lt;w0&gt;}</code></td><td>PC &rarr; FPGA</td></tr>
+            <tr><td><strong>Burst Pixel</strong></td><td>16</td><td><code>{R0,G0,B0,R1,G1,B1,R2,G2,B2,R3,G3,B3}</code></td><td>Both</td></tr>
+        </table>
+    </div>
+    <div class="card" style="margin-top:20px;">
+        <h4>Pixel Packing: 4 Pixels per Message</h4>
+        <p>Each burst pixel message carries 4 pixels in interleaved RGB order. This maps directly to one SRAM row per color channel:</p>
+        <div class="diagram" style="font-size:11px;padding:14px;margin:8px 0 0 0;"><span class="hl-orange">Wire:</span>  { <span class="hl-orange">R0</span> , <span class="hl-green">G0</span> , <span class="hl-cyan">B0</span> , <span class="hl-orange">R1</span> , <span class="hl-green">G1</span> , <span class="hl-cyan">B1</span> , <span class="hl-orange">R2</span> , <span class="hl-green">G2</span> , <span class="hl-cyan">B2</span> , <span class="hl-orange">R3</span> , <span class="hl-green">G3</span> , <span class="hl-cyan">B3</span> }
+
+<span class="hl-orange">SRAM Red:</span>    [ R0 | R1 | R2 | R3 ]  &larr; 1 row = 32 bits
+<span class="hl-green">SRAM Green:</span>  [ G0 | G1 | G2 | G3 ]
+<span class="hl-cyan">SRAM Blue:</span>   [ B0 | B1 | B2 | B3 ]</div>
+    </div>
+</section>
+
+<!-- ─── CDC ─── -->
+<section class="section" id="cdc">
+    <div class="section-header">
+        <h2>Clock Domain Crossing</h2>
+        <p class="section-desc">Robust multi-stage synchronization between the 176 MHz serial domain and 100 MHz system domain.</p>
+    </div>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><div class="card-icon purple">&#8651;</div><div><div class="card-title">Control Signals</div><div class="card-subtitle">2-FF / 3-FF synchronizers</div></div></div>
+            <ul>
+                <li><strong>data_available</strong>: 3-FF sync + edge detector for single-pulse triggering</li>
+                <li><strong>seq_ready</strong>: 2-FF sync from system to RX domain</li>
+                <li><strong>burst_done</strong>: 2-FF sync from system to RX domain</li>
+            </ul>
+            <div class="code-block"><code><span class="code-comment">// 3-FF edge detection for reliable data_available</span>
+<span class="code-signal">data_avail_sync1</span> &lt;= <span class="code-signal">rx_data_available</span>;
+<span class="code-signal">data_avail_sync2</span> &lt;= <span class="code-signal">data_avail_sync1</span>;
+<span class="code-signal">data_avail_sync3</span> &lt;= <span class="code-signal">data_avail_sync2</span>;
+
+<span class="code-keyword">wire</span> <span class="code-signal">data_avail_rising</span> = <span class="code-signal">data_avail_sync2</span> &amp;&amp; !<span class="code-signal">data_avail_sync3</span>;</code></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon red">&#9888;</div><div><div class="card-title">Glitch Guard</div><div class="card-subtitle">Registered combinational signals before CDC</div></div></div>
+            <p>Combinational outputs like <code>sys_burst_done</code> from multi-bit state machines can glitch during transitions. The 176 MHz CDC can sample these glitches as spurious pulses.</p>
+            <h4>Fix: Pipeline Register</h4>
+            <div class="code-block"><code><span class="code-comment">// Register in 100 MHz domain before CDC crossing</span>
+<span class="code-keyword">always_ff</span> @(<span class="code-keyword">posedge</span> <span class="code-signal">clk_100</span>)
+    <span class="code-signal">sys_burst_done_reg</span> &lt;= <span class="code-signal">sys_burst_done</span>;
+
+<span class="code-comment">// Feed glitch-free signal to CDC module</span>
+<span class="code-module">uart_cdc_sync</span> u_cdc (
+    .<span class="code-signal">sys_burst_done</span>(<span class="code-signal">sys_burst_done_reg</span>),
+    ...
+);</code></div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><div class="card-icon cyan">&#9638;</div><div><div class="card-title">Data Bus Sampling</div><div class="card-subtitle">Aligned with edge-detected control pulse</div></div></div>
+        <p>Wide data buses (parsed address, pixel data, message type) are sampled in the system domain only on the rising edge of the synchronized <code>data_available</code>. A 1-cycle delay on <code>sys_data_available</code> ensures the sampled data has settled before downstream consumers see the valid signal.</p>
+    </div>
+</section>
+
+<!-- ─── SEQUENCERS ─── -->
+<section class="section" id="sequencers">
+    <div class="section-header">
+        <h2>Sequencers &amp; DMA Engine</h2>
+        <p class="section-desc">Dedicated state machines for automated image transfer without software intervention per pixel.</p>
+    </div>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><div class="card-icon orange">&#9655;</div><div><div class="card-title">RX Burst Sequencer</div><div class="card-subtitle">seq_rx_image_burst.sv</div></div></div>
+            <ul>
+                <li><strong>Latched dimensions</strong>: Height/width captured only on <code>START_BURST_WR</code>, immune to subsequent pixel messages overwriting them</li>
+                <li><strong>Edge-detected triggers</strong>: Rising-edge detector on <code>new_msg_valid</code> prevents re-triggering from level-sensitive CDC signals</li>
+                <li><strong>15-bit row counter</strong>: Can count to 16,384 (256&times;256/4) without overflow</li>
+                <li><strong>32-bit multiply</strong>: Explicit cast <code>32'(h) * 32'(w)</code> prevents 16-bit overflow</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon cyan">&#9655;</div><div><div class="card-title">TX Burst Sequencer</div><div class="card-subtitle">Sequencer_Burst_Tx.sv</div></div></div>
+            <ul>
+                <li><strong>Pipelined SRAM reads</strong>: 1-cycle read latency managed with <code>sram_read_req_d1</code> tracking</li>
+                <li><strong>3 Async FIFOs</strong>: Gray-code pointer FIFOs bridge 100 MHz SRAM reads to 176 MHz TX path</li>
+                <li><strong>Back-pressure safe</strong>: New SRAM read blocked while previous data awaits FIFO push</li>
+                <li><strong>Frame-active tracking</strong>: 3-FF synchronizer + falling-edge detector for TX completion</li>
+            </ul>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><div class="card-icon green">&#9776;</div><div><div class="card-title">rx_msg_handler &mdash; Unified Handshake</div><div class="card-subtitle">Wraps burst sequencer, single-pixel sequencer, and RGF manager</div></div></div>
+        <p>All three consumers share a single <code>sys_seq_ready</code> and <code>sys_burst_done</code> output back to the classifier (via CDC). The handler routes incoming messages based on <code>msg_type</code> and consolidates completion signals.</p>
+    </div>
+</section>
+
+<!-- ─── MEMORY ─── -->
+<section class="section" id="memory">
+    <div class="section-header">
+        <h2>Memory Subsystem</h2>
+        <p class="section-desc">Three color-separated SRAMs and a gray-code async FIFO for cross-domain data transfer.</p>
+    </div>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><div class="card-icon blue">&#9646;</div><div><div class="card-title">Color-Separated SRAM</div><div class="card-subtitle">3 &times; 16K &times; 32-bit</div></div></div>
+            <div class="table-container" style="margin-top:10px;">
+                <table>
+                    <tr><th>SRAM</th><th>Depth</th><th>Width</th><th>Address</th></tr>
+                    <tr><td style="color:var(--accent-red);">sram_red</td><td>16,384</td><td>32 bits</td><td>14-bit</td></tr>
+                    <tr><td style="color:var(--accent-green);">sram_green</td><td>16,384</td><td>32 bits</td><td>14-bit</td></tr>
+                    <tr><td style="color:var(--accent-blue);">sram_blue</td><td>16,384</td><td>32 bits</td><td>14-bit</td></tr>
+                </table>
+            </div>
+            <p style="margin-top:12px;font-size:13px;">Dual-port: write from RX sequencers (100 MHz), read by TX sequencer (100 MHz). Each row stores 4 pixels: <code>[P0|P1|P2|P3]</code>.</p>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon purple">&#8644;</div><div><div class="card-title">Async FIFO</div><div class="card-subtitle">Gray-code CDC FIFO for TX path</div></div></div>
+            <ul>
+                <li><strong>Gray-code pointers</strong>: Single-bit change guarantees no metastable multi-bit transitions</li>
+                <li><strong>2-FF synchronization</strong> on read/write pointers across domains</li>
+                <li><strong>Correct empty flag</strong>: <code>empty = (rgray == wgray_rsync)</code></li>
+                <li><strong>Effective depth</strong>: N-1 usable entries (Cummings formulation)</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ─── RGF ─── -->
+<section class="section" id="rgf">
+    <div class="section-header">
+        <h2>Register Files</h2>
+        <p class="section-desc">6 register file modules accessible from the host via UART messages.</p>
+    </div>
+    <div class="grid-3">
+        <div class="card" style="text-align:center;">
+            <div style="font-size:24px;margin-bottom:6px;">&#128161;</div>
+            <div class="card-title">RGF_LED</div>
+            <div style="font-size:12px;color:var(--text-muted);">LED control register</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:24px;margin-bottom:6px;">&#9881;</div>
+            <div class="card-title">RGF_SYS</div>
+            <div style="font-size:12px;color:var(--text-muted);">System configuration</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:24px;margin-bottom:6px;">&#9201;</div>
+            <div class="card-title">RGF_CNT</div>
+            <div style="font-size:12px;color:var(--text-muted);">Counter / status</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:24px;margin-bottom:6px;">&#9734;</div>
+            <div class="card-title">RGF_PWM</div>
+            <div style="font-size:12px;color:var(--text-muted);">PWM control</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:24px;margin-bottom:6px;">&#128247;</div>
+            <div class="card-title">RGF_IMG</div>
+            <div style="font-size:12px;color:var(--text-muted);">Image parameters</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-size:24px;margin-bottom:6px;">&#128230;</div>
+            <div class="card-title">RGF_Seq_TX</div>
+            <div style="font-size:12px;color:var(--text-muted);">TX FIFO control</div>
+        </div>
+    </div>
+    <div class="card">
+        <h4>RGF Manager Read Timing</h4>
+        <p>The <code>rd_en</code> signal must remain asserted throughout the entire read FSM, not just for one clock cycle. The handshake clears <code>data_available</code> before the read FSM finishes, so <code>rd_en</code> is driven by both the incoming request <em>and</em> the active state machine.</p>
+        <div class="code-block"><code><span class="code-keyword">assign</span> <span class="code-signal">rd_en</span> = ((<span class="code-signal">Msg_Type</span> == MSG_READ_RGF) &amp;&amp; <span class="code-signal">new_msg_valid</span>) || (<span class="code-signal">current_state_rgf</span> != IDLE);</code></div>
+    </div>
+</section>
+
+<!-- ─── TESTBENCHES ─── -->
+<section class="section" id="testbenches">
+    <div class="section-header">
+        <h2>Testbenches</h2>
+        <p class="section-desc">Incremental verification from unit to full system integration.</p>
+    </div>
+    <div class="table-container">
+        <table>
+            <tr><th>Testbench</th><th>Scope</th><th>What It Verifies</th></tr>
+            <tr><td><code>tb_uart_rx_phy_mac</code></td><td>PHY + MAC</td><td>Byte reception, message framing, delimiter handling</td></tr>
+            <tr><td><code>tb_uart_rx_full_chain</code></td><td>PHY + MAC + Classifier</td><td>All 6 message types parsed correctly, field extraction</td></tr>
+            <tr><td><code>tb_uart_rx_system</code></td><td>Full System (with CDC)</td><td>Cross-domain handshake, sequencer writes, RGF access</td></tr>
+            <tr><td><code>tb_RAM_seq_composer</code></td><td>SRAM + Sequencer + Composer</td><td>SRAM read pipeline, message composition</td></tr>
+            <tr><td><code>tb_RAM_seq_composer_MAC</code></td><td>SRAM + Seq + Composer + MAC</td><td>End-to-end TX path from SRAM to serial output</td></tr>
+            <tr><td><code>tb_uart_test_check</code></td><td>Basic UART</td><td>Fundamental serial communication check</td></tr>
+        </table>
+    </div>
+</section>
+
+<!-- ─── PYTHON ─── -->
+<section class="section" id="python">
+    <div class="section-header">
+        <h2>Python Host Scripts</h2>
+        <p class="section-desc">Complete host-side tooling for image transfer and register verification.</p>
+    </div>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><div class="card-icon orange">&#9655;</div><div><div class="card-title">send_burst_image.py</div><div class="card-subtitle">Image Write: PC &rarr; FPGA</div></div></div>
+            <ul>
+                <li>Loads PNG, JPG, PGM images via Pillow</li>
+                <li>Resizes to 256&times;256 and converts to RGB</li>
+                <li>Sends START_BURST_WR + 16,384 pixel messages</li>
+                <li>5.5 Mbaud, no hardware flow control</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon cyan">&#9665;</div><div><div class="card-title">receive_burst_image.py</div><div class="card-subtitle">Image Read: FPGA &rarr; PC</div></div></div>
+            <ul>
+                <li>Sends START_BURST_RD request</li>
+                <li>512 KB receive buffer to prevent overflow</li>
+                <li>Bulk-read 64 KB chunks, then parse</li>
+                <li>Saves as PPM to <code>img_output/</code></li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon green">&#10003;</div><div><div class="card-title">test_rgf_readwrite.py</div><div class="card-subtitle">Register verification</div></div></div>
+            <ul>
+                <li>Writes test values to all 6 register files</li>
+                <li>Reads back and compares with writable-bit masks</li>
+                <li>Reports PASS/FAIL per register</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-icon blue">&#128269;</div><div><div class="card-title">compare_images.py</div><div class="card-subtitle">Pixel-level comparison</div></div></div>
+            <ul>
+                <li>Compares input vs received image</li>
+                <li>Reports pixel differences and locations</li>
+                <li>Validates end-to-end image integrity</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ─── CHALLENGES ─── -->
+<section class="section" id="challenges">
+    <div class="section-header">
+        <h2>Design Challenges Solved</h2>
+        <p class="section-desc">Real hardware bugs discovered and fixed through systematic debug with LED diagnostics and waveform analysis.</p>
+    </div>
+
+    <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent-red);"></div>
+        <div class="timeline-content">
+            <div class="timeline-title">Pixel-as-Delimiter Collision</div>
+            <div class="timeline-desc">Pixel value 0x7D (125) matches the <code>}</code> frame delimiter, causing premature message termination and a +3 pixel shift in the output image. Fixed with position-aware <code>close_at_end</code> logic that only accepts <code>}</code> at expected end positions (byte 5, 10, 15).</div>
+        </div>
+    </div>
+    <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent-yellow);"></div>
+        <div class="timeline-content">
+            <div class="timeline-title">CDC Combinational Glitch on burst_done</div>
+            <div class="timeline-desc">Multi-bit state transitions (e.g., 0011 &rarr; 0100) in the 100 MHz sequencer produced brief combinational glitches on <code>burst_done</code>. The 176 MHz CDC sampled these as spurious pulses, clearing <code>burst_on</code> after just one pixel message. Fixed by registering the signal before CDC crossing.</div>
+        </div>
+    </div>
+    <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent-orange);"></div>
+        <div class="timeline-content">
+            <div class="timeline-title">TX Stall at 43.8% &mdash; Pipeline Data Loss</div>
+            <div class="timeline-desc">The TX burst sequencer issued new SRAM reads while the previous read's data was still pending a FIFO push (FIFO full). This caused data loss at exactly 7,168 out of 16,384 messages. Fixed by gating <code>sram_read_req</code> with <code>~sram_read_req_d1</code> to guarantee a FIFO slot for every read.</div>
+        </div>
+    </div>
+    <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent-blue);"></div>
+        <div class="timeline-content">
+            <div class="timeline-title">Height/Width Zeroed on Pixel Messages</div>
+            <div class="timeline-desc">The classifier outputs <code>height=0, width=0</code> for pixel messages (only START messages carry dimensions). CDC propagated these zeros, causing <code>max_rows=0</code> and immediate burst completion after one message. Fixed by latching dimensions only on <code>MSG_START_BURST_WR</code>.</div>
+        </div>
+    </div>
+    <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent-purple);"></div>
+        <div class="timeline-content">
+            <div class="timeline-title">Python Serial Buffer Overflow</div>
+            <div class="timeline-desc">Default OS serial buffer (4 KB) and byte-by-byte reading caused 1.6% data loss (16,129/16,384 messages). Fixed by increasing RX buffer to 512 KB and switching to bulk 64 KB reads with post-parse message extraction.</div>
+        </div>
+    </div>
+    <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent-green);"></div>
+        <div class="timeline-content">
+            <div class="timeline-title">RGF Read Enable Timing</div>
+            <div class="timeline-desc">The <code>rd_en</code> signal was asserted for only one clock cycle on <code>new_msg_valid</code>, but the handshake cleared <code>new_msg_valid</code> before the RGF read FSM could complete. All reads returned zeros. Fixed by keeping <code>rd_en</code> asserted throughout the entire read state machine.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── MODULE INDEX ─── -->
+<section class="section" id="modules">
+    <div class="section-header">
+        <h2>RTL Module Index</h2>
+        <p class="section-desc">All 27 synthesizable modules organized by subsystem.</p>
+    </div>
+    <div class="table-container">
+        <table>
+            <tr><th>Module</th><th>File</th><th>Domain</th><th>Role</th></tr>
+            <tr><td><strong>uart_top</strong></td><td>rtl/uart_top.sv</td><td><span class="tag both">Both</span></td><td>Top-level integration, LED diagnostics, CDC glitch guards</td></tr>
+            <tr><td><strong>uart_types</strong></td><td>rtl/uart_types.sv</td><td><span class="tag both">Both</span></td><td>Shared type definitions</td></tr>
+            <tr><td colspan="4" style="background:var(--bg-card);color:var(--accent-orange);font-weight:600;font-size:12px;letter-spacing:1px;">RX PATH</td></tr>
+            <tr><td>uart_rx_PHY</td><td>rtl/Uart_Rx/</td><td><span class="tag fast">176 MHz</span></td><td>Bit-level reception, 32x oversampling, triple-flop sync</td></tr>
+            <tr><td>uart_rx_MAC</td><td>rtl/Uart_Rx/</td><td><span class="tag fast">176 MHz</span></td><td>Byte assembly, frame validation, delimiter-safe</td></tr>
+            <tr><td>uart_classifier</td><td>rtl/Uart_Rx/</td><td><span class="tag fast">176 MHz</span></td><td>Message decode, field extraction, burst_on control</td></tr>
+            <tr><td>uart_cdc_sync</td><td>rtl/Uart_Rx/</td><td><span class="tag both">Both</span></td><td>2-FF/3-FF synchronizers, edge-triggered data sampling</td></tr>
+            <tr><td>parser_pkg</td><td>rtl/Uart_Rx/</td><td>&mdash;</td><td>Message type enums &amp; constants package</td></tr>
+            <tr><td colspan="4" style="background:var(--bg-card);color:var(--accent-cyan);font-weight:600;font-size:12px;letter-spacing:1px;">TX PATH</td></tr>
+            <tr><td>uart_tx</td><td>rtl/Uart_Tx/</td><td><span class="tag fast">176 MHz</span></td><td>Serial bit transmission</td></tr>
+            <tr><td>uart_tx_fsm</td><td>rtl/Uart_Tx/</td><td><span class="tag fast">176 MHz</span></td><td>Baud-rate timing &amp; shift control</td></tr>
+            <tr><td>uart_tx_mac_fsm</td><td>rtl/Uart_Tx/</td><td><span class="tag fast">176 MHz</span></td><td>Byte-by-byte message dispatch, immediate data latch</td></tr>
+            <tr><td>msg_compposer</td><td>rtl/Uart_Tx/</td><td><span class="tag fast">176 MHz</span></td><td>Formats RGF responses &amp; burst pixel messages</td></tr>
+            <tr><td colspan="4" style="background:var(--bg-card);color:var(--accent-blue);font-weight:600;font-size:12px;letter-spacing:1px;">SEQUENCERS</td></tr>
+            <tr><td>rx_msg_handler</td><td>rtl/Sequencers/</td><td><span class="tag sys">100 MHz</span></td><td>Unified RX handler, routes messages, consolidates handshake</td></tr>
+            <tr><td>seq_rx_image_burst</td><td>rtl/Sequencers/</td><td><span class="tag sys">100 MHz</span></td><td>Burst write sequencer (PC &rarr; SRAM)</td></tr>
+            <tr><td>seq_rx_image_single</td><td>rtl/Sequencers/</td><td><span class="tag sys">100 MHz</span></td><td>Single-pixel write sequencer</td></tr>
+            <tr><td>Sequencer_Burst_Tx</td><td>rtl/Sequencers/</td><td><span class="tag sys">100 MHz</span></td><td>Burst read sequencer (SRAM &rarr; PC), pipelined SRAM reads</td></tr>
+            <tr><td>rgf_manager</td><td>rtl/Sequencers/</td><td><span class="tag sys">100 MHz</span></td><td>RGF read/write state machine</td></tr>
+            <tr><td colspan="4" style="background:var(--bg-card);color:var(--accent-green);font-weight:600;font-size:12px;letter-spacing:1px;">MEMORY &amp; INFRASTRUCTURE</td></tr>
+            <tr><td>sram_red / green / blue</td><td>rtl/Memory/</td><td><span class="tag sys">100 MHz</span></td><td>16K&times;32 dual-port SRAM per color channel</td></tr>
+            <tr><td>FIFO_Async</td><td>rtl/Memory/</td><td><span class="tag both">Both</span></td><td>Gray-code async FIFO for TX CDC</td></tr>
+            <tr><td>glitchless_clock_mux</td><td>rtl/Clock_Reset/</td><td>&mdash;</td><td>Glitch-free clock selection</td></tr>
+            <tr><td>reset_synchronizer</td><td>rtl/Clock_Reset/</td><td>&mdash;</td><td>Async reset synchronization</td></tr>
+            <tr><td colspan="4" style="background:var(--bg-card);color:var(--accent-purple);font-weight:600;font-size:12px;letter-spacing:1px;">REGISTER FILES</td></tr>
+            <tr><td>RGF_LED / SYS / CNT / PWM / IMG / Seq_TX</td><td>rtl/RGF/</td><td><span class="tag sys">100 MHz</span></td><td>6 register file modules</td></tr>
+        </table>
+    </div>
+</section>
+
+<!-- ─── SKILLS ─── -->
+<section class="section" id="skills">
+    <div class="section-header">
+        <h2>Skills Demonstrated</h2>
+        <p class="section-desc">Technical competencies exercised throughout this project.</p>
+    </div>
+    <div class="grid-3">
+        <div class="card">
+            <div class="card-title" style="margin-bottom:12px;color:var(--accent-orange);">RTL Design</div>
+            <ul>
+                <li>SystemVerilog (always_ff, always_comb, packages, enums, typedef)</li>
+                <li>FSM design (Mealy/Moore)</li>
+                <li>Parameterized modules</li>
+                <li>Multi-module SoC integration</li>
+                <li>Pipeline design &amp; hazard management</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-title" style="margin-bottom:12px;color:var(--accent-purple);">Clock Domain Crossing</div>
+            <ul>
+                <li>2-FF &amp; 3-FF synchronizers</li>
+                <li>Gray-code async FIFO</li>
+                <li>Edge detection across domains</li>
+                <li>Glitch guard (registered combinational)</li>
+                <li>Data bus alignment with control pulses</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-title" style="margin-bottom:12px;color:var(--accent-blue);">Communication Protocols</div>
+            <ul>
+                <li>UART PHY (oversampling, start/stop bit)</li>
+                <li>Custom MAC framing protocol</li>
+                <li>Handshake (data_available / seq_ready)</li>
+                <li>DMA burst transfer</li>
+                <li>Register bus read/write</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-title" style="margin-bottom:12px;color:var(--accent-green);">FPGA Implementation</div>
+            <ul>
+                <li>Vivado synthesis &amp; implementation</li>
+                <li>Artix-7 BRAM inference</li>
+                <li>Constraints (.xdc) &amp; pin planning</li>
+                <li>Resource utilization optimization</li>
+                <li>On-board LED debug diagnostics</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-title" style="margin-bottom:12px;color:var(--accent-cyan);">Verification</div>
+            <ul>
+                <li>SystemVerilog testbenches</li>
+                <li>Incremental verification (unit &rarr; system)</li>
+                <li>Vivado simulation</li>
+                <li>Waveform analysis &amp; debug</li>
+                <li>Python-based hardware-in-the-loop testing</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-title" style="margin-bottom:12px;color:var(--accent-yellow);">Software &amp; Scripting</div>
+            <ul>
+                <li>Python serial communication (pyserial)</li>
+                <li>Image processing (Pillow)</li>
+                <li>Bulk data transfer optimization</li>
+                <li>Debug output &amp; error reporting</li>
+                <li>Cross-platform serial buffer tuning</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<div style="text-align:center;padding:60px 0 40px;border-top:1px solid var(--border);margin-top:40px;">
+    <div style="font-size:22px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,var(--accent-orange),var(--accent-yellow));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">UART Image Processing SoC</div>
+    <div style="color:var(--text-muted);font-size:14px;">Designed by Assaf Afriat &bull; 2026</div>
+    <div style="color:var(--text-muted);font-size:12px;margin-top:6px;">SystemVerilog &bull; Vivado &bull; Nexys A7-100T &bull; Python</div>
+</div>
+
+</main>
+
+<!-- ═══════════════════════ SIDEBAR NAV HIGHLIGHT ═══════════════════════ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const links = document.querySelectorAll('.nav-link');
+    const sections = [];
+    links.forEach(link => {
+        const id = link.getAttribute('href');
+        if (id && id.startsWith('#')) {
+            const el = document.querySelector(id);
+            if (el) sections.push({ link, el });
+        }
+    });
+    function updateActive() {
+        let current = sections[0];
+        const scrollY = window.scrollY + 120;
+        for (const s of sections) {
+            if (s.el.offsetTop <= scrollY) current = s;
+        }
+        links.forEach(l => l.classList.remove('active'));
+        if (current) current.link.classList.add('active');
+    }
+    window.addEventListener('scroll', updateActive);
+    updateActive();
+
+    links.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+});
+</script>
+
+</body>
+</html>

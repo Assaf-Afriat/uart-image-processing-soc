@@ -1,0 +1,29 @@
+# Build artifacts
+build/*.bit
+
+# Vivado project files (regenerated per machine)
+*.xpr
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.gen/
+*.srcs/
+
+# Simulation artifacts
+*.vcd
+*.wlf
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
